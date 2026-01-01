@@ -1,0 +1,3 @@
+[2026-01-01 21:48:54.859] [DEBUG] This is a debug message to debug.log: 3.14
+[2026-01-01 22:09:59.981] [PID:25235] [DEBUG] [log_test.cpp:7] This is a debug message to debug.log: 3.14
+[2026-01-01 22:12:08.097] [PID:25317] [DEBUG] [log_test.cpp:7] This is a debug message to debug.log: 3.14
