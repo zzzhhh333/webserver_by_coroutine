@@ -35,7 +35,7 @@ foreach(test_src IN LISTS TEST_SOURCES)
     get_filename_component(test_name ${test_src} NAME_WE)
     
     add_executable(${test_name} ${test_src})
-    
+
     # 链接主库（包含 Logger 实现）和 fmt（虽然已通过库传递，但显式更安全）
     target_link_libraries(${test_name} PRIVATE webserver_by_coroutine)
 endforeach()

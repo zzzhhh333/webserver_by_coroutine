@@ -1,4 +1,0 @@
-/home/zzzhhh/MyLinux/Project/webserver_by_coroutine/build/CMakeFiles/webserver_by_coroutine.dir
-/home/zzzhhh/MyLinux/Project/webserver_by_coroutine/build/CMakeFiles/log_test.dir
-/home/zzzhhh/MyLinux/Project/webserver_by_coroutine/build/CMakeFiles/edit_cache.dir
-/home/zzzhhh/MyLinux/Project/webserver_by_coroutine/build/CMakeFiles/rebuild_cache.dir

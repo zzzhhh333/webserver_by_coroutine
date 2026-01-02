@@ -61,6 +61,20 @@
         "optional": "cpp",
         "span": "cpp",
         "cinttypes": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "coroutine": "cpp",
+        "csignal": "cpp",
+        "any": "cpp",
+        "bitset": "cpp",
+        "codecvt": "cpp",
+        "complex": "cpp",
+        "list": "cpp",
+        "map": "cpp",
+        "set": "cpp",
+        "source_location": "cpp",
+        "future": "cpp",
+        "shared_mutex": "cpp",
+        "typeindex": "cpp",
+        "forward_list": "cpp"
     }
 }
