@@ -39,6 +39,7 @@
 #define NB_LOG_WARN_ONLY_FILE(file_name, msg, ...)  NB_LOG_IMPL(WARN,  {file_name}, msg, false, ##__VA_ARGS__)
 #define NB_LOG_ERROR_ONLY_FILE(file_name, msg, ...) NB_LOG_IMPL(ERROR, {file_name}, msg, false, ##__VA_ARGS__) 
 #define NB_LOG_FATAL_ONLY_FILE(file_name, msg, ...) NB_LOG_IMPL(FATAL, {file_name}, msg, false, ##__VA_ARGS__)
+
 namespace nb {
 namespace log {
 class Logger
