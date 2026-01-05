@@ -7,10 +7,11 @@
 
 namespace nb {
 namespace coroutine {
+
 class Coroutine : public std::enable_shared_from_this<Coroutine> {
 public:
     enum class State {
-        READY,
+        READY = 0,
         RUNNING,
         FINISHED,
         EXCEPTION
@@ -23,6 +24,8 @@ public:
      * @param cb 协程执行的函数
      */
     explicit Coroutine(std::function<void()> cb);
+
+    explicit Coroutine();
     
     /** 
      * @brief 析构函数，释放协程的栈空间
@@ -44,6 +47,7 @@ public:
      * 
      */
     static void Yield();
+
 private:
     //! 协程的入口函数
     static void CoroutineEntryPoint(Coroutine* co); 

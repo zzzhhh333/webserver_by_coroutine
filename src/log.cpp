@@ -1,7 +1,7 @@
 #include "log.h"
 #include <iostream>
 #include <fstream>
-#include <unistd.h>
+#include "util.h"
 
 namespace nb {
 namespace log {
@@ -18,7 +18,8 @@ Logger::~Logger()
         std::unique_lock<std::mutex> lock(mtx_);
         running_ = false;
     }
-    cond_v_.notify_all();
+    cond_v_.notify_all(); // 唤醒写线程
+
     if (write_thread_.joinable()) {
         write_thread_.join();
     }
@@ -38,6 +39,26 @@ void Logger::Log(Level level, const std::string &msg,
     cond_v_.notify_one();
 }
 
+void Logger::Flush() {
+    std::unique_lock<std::mutex> lock(mtx_);
+    if (!running_) return;
+
+    // 唤醒写线程，并等待队列清空
+    cond_v_.notify_all();
+    // 等待直到队列为空（或超时）
+    constexpr int max_wait_ms = 2000;
+    auto start = std::chrono::steady_clock::now();
+    while (!msg_queue_.empty()) {
+        auto now = std::chrono::steady_clock::now();
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count() > max_wait_ms) {
+            break; // 超时，避免卡死
+        }
+        lock.unlock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        lock.lock();
+    }
+}
+
 Logger& Logger::GetInstance()
 {
     static Logger instance("default_logger");
@@ -52,13 +73,14 @@ std::string Logger::format_message(Level level, const std::string &msg,
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
         now.time_since_epoch()) % 1000;
 
-    // 获取进程 ID
+    // 获取进程 ID 和线程 ID
     pid_t pid = getpid();
+    pid_t tid = util::GetThreadId(); // ← 获取线程 ID
 
-    // 提取文件名（去掉路径，只保留如 "main.cpp"）
+    // 提取文件名
     const char* filename = strrchr(file, '/');
     if (filename == nullptr) {
-        filename = strrchr(file, '\\'); // Windows 兼容
+        filename = strrchr(file, '\\');
     }
     if (filename != nullptr) {
         file = filename + 1;
@@ -78,6 +100,7 @@ std::string Logger::format_message(Level level, const std::string &msg,
     oss << "[" << std::put_time(localtime(&time_t), "%Y-%m-%d %H:%M:%S")
         << "." << std::setfill('0') << std::setw(3) << ms.count() << "] "
         << "[PID:" << pid << "] "
+        << "[TID:" << tid << "] "   // ← 关键新增
         << "[" << level_str << "] "
         << "[" << file << ":" << line << "] "
         << msg;
