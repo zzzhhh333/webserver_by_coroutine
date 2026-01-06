@@ -5,25 +5,42 @@
 namespace nb {
 namespace coroutine {
 static thread_local Coroutine* current_coroutine = nullptr;     //!  当前正在工作的协程
+static std::atomic<uint64_t> s_fiber_id {0};                    //!  协程 ID 生成器
+static std::atomic<uint64_t> s_fiber_count {0};                 //!  当前协程数量
 
-Coroutine::Coroutine(std::function<void()> cb)
+Coroutine::Coroutine(std::function<void()> cb, size_t stack_size)
         : cb_(std::move(cb)) 
+        , id_(++s_fiber_id)
+        , state_(State::READY)
+        , stack_size_(stack_size)
 {
-    stack_ = new char[stack_size_];
+    s_fiber_count++;
+    NB_LOG_INFO("Creating new coroutine, id: {}, total: {}", id_, s_fiber_count);
+    stack_ = malloc(stack_size_);
     
     getcontext(&context_);
     context_.uc_stack.ss_sp = stack_;
     context_.uc_stack.ss_size = stack_size_;
-    context_.uc_link = &scheduler::Scheduler::GetMainContext();
-    makecontext(&context_, (void (*)()) &Coroutine::CoroutineEntryPoint, 1, this);
+    context_.uc_link = nullptr;
+    makecontext(&context_, &Coroutine::CoroutineEntryPoint, 0);
 }
 
 Coroutine::Coroutine()
     : cb_(nullptr)
-{
-    stack_ = new char[stack_size_];
-    
+{   
+    s_fiber_count++;
+    id_ = ++s_fiber_id;
+    state_ = State::RUNNING;
+    current_coroutine = this;
+    NB_LOG_INFO("Creating main coroutine, id: {}, total: {}", id_, s_fiber_count);
     getcontext(&context_);
+}
+
+uint64_t Coroutine::GetFiberId() {
+    if (current_coroutine) {
+        return current_coroutine->id_;
+    }
+    return 0;
 }
 
 void Coroutine::Resume() 
@@ -33,7 +50,7 @@ void Coroutine::Resume()
 
     current_coroutine = this;
     state_ = State::RUNNING;
-    swapcontext(&scheduler::Scheduler::GetMainContext(), &context_);
+    swapcontext(&scheduler::Scheduler::GetMainContext()->context_, &context_);
     current_coroutine = nullptr;
 }
 
@@ -41,18 +58,31 @@ void Coroutine::Yield()
 {
     NB_ASSERT(current_coroutine != nullptr, "Yield() called outside any coroutine");
     current_coroutine->state_ = State::READY;
-    swapcontext(&current_coroutine->context_, &scheduler::Scheduler::GetMainContext());
+    swapcontext(&current_coroutine->context_, &scheduler::Scheduler::GetMainContext()->context_);
 }
 
 Coroutine::~Coroutine() 
 {
-    NB_ASSERT(state_ == State::FINISHED || state_ == State::EXCEPTION || state_ == State::READY,
-              "Coroutine must be finished or in exception state before destruction");
-    delete[] stack_;
+    s_fiber_count--;
+    NB_LOG_INFO("Destroying coroutine, id: {}, total: {}", id_, s_fiber_count);
+    if (stack_) {
+        NB_ASSERT(state_ == State::FINISHED || state_ == State::EXCEPTION || state_ == State::READY,
+              "Coroutine must nbe finished or in exception state before destruction");
+        free(stack_);
+    } else {
+        NB_ASSERT(state_ == State::RUNNING,
+              "Main coroutine must be in RUNNING state before destruction");
+    }
 }
 
-void Coroutine::CoroutineEntryPoint(Coroutine* co) 
+Coroutine* Coroutine::GetThis() 
 {
+    return current_coroutine;
+}
+
+void Coroutine::CoroutineEntryPoint() 
+{
+    Coroutine* co = Coroutine::GetThis();
     NB_ASSERT(co->state_ == State::RUNNING, "Coroutine must be in RUNNING state at entry point");
 
     try 
@@ -60,7 +90,6 @@ void Coroutine::CoroutineEntryPoint(Coroutine* co)
         if (co->cb_) {
             co->cb_();
         }
-        NB_LOG_INFO("Coroutine finished");
         co->state_ = State::FINISHED;
     } catch (const std::exception &e) {
         NB_LOG_ERROR("Coroutine exception: {}", e.what());
@@ -70,7 +99,8 @@ void Coroutine::CoroutineEntryPoint(Coroutine* co)
         co->state_ = State::EXCEPTION;
     }
 
-    NB_LOG_INFO("Coroutine exiting, switching back to main context");
+    co->cb_ = nullptr;
+    swapcontext(&co->context_, &scheduler::Scheduler::GetMainContext()->context_);
 }
 
 } // namespace coroutine

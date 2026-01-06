@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include "util.h"
+#include "coroutine.h"
 
 namespace nb {
 namespace log {
@@ -76,6 +77,7 @@ std::string Logger::format_message(Level level, const std::string &msg,
     // 获取进程 ID 和线程 ID
     pid_t pid = getpid();
     pid_t tid = util::GetThreadId(); // ← 获取线程 ID
+    int fiber_id = coroutine::Coroutine::GetFiberId();
 
     // 提取文件名
     const char* filename = strrchr(file, '/');
@@ -101,6 +103,7 @@ std::string Logger::format_message(Level level, const std::string &msg,
         << "." << std::setfill('0') << std::setw(3) << ms.count() << "] "
         << "[PID:" << pid << "] "
         << "[TID:" << tid << "] "   // ← 关键新增
+        << "[FID:" << fiber_id << "] "
         << "[" << level_str << "] "
         << "[" << file << ":" << line << "] "
         << msg;

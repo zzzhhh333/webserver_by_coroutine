@@ -96,7 +96,11 @@ public:
      */
     void stop();
 
-    static ucontext_t& GetMainContext();
+    /**
+     * @brief 获取当前线程的主协程上下文
+     * @return 主协程指针
+     */
+    static coroutine::Coroutine::ptr& GetMainContext();
 
 private:
     /**

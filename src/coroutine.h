@@ -23,7 +23,7 @@ public:
      * @brief 构造函数，创建一个协程并初始化其上下文
      * @param cb 协程执行的函数
      */
-    explicit Coroutine(std::function<void()> cb);
+    explicit Coroutine(std::function<void()> cb, size_t stack_size = 1024 * 1024);
 
     explicit Coroutine();
     
@@ -48,15 +48,27 @@ public:
      */
     static void Yield();
 
+    /** 
+     * @brief 获取当前协程对象
+     * @return 当前协程指针
+     */
+    static Coroutine* GetThis();
+
+    /** 
+     * @brief 获取当前协程的 ID
+     * @return 协程 ID
+     */
+    static uint64_t GetFiberId();
 private:
     //! 协程的入口函数
-    static void CoroutineEntryPoint(Coroutine* co); 
+    static void CoroutineEntryPoint(); 
 private:
     ucontext_t context_;                        // 协程上下文
-    static const int stack_size_ = 1024 * 1024; // 1 MB
-    char *stack_;                               // 协程栈空间
+    const int stack_size_ = 1024 * 1024;        // 1 MB
+    void *stack_ = nullptr;                     // 协程栈空间
     std::function<void()> cb_;                  // 协程执行的函数
-    State state_ = State::READY;               // 协程状态
+    State state_ = State::READY;                // 协程状态
+    int id_;                                    // 协程 ID
 };
 
 }
